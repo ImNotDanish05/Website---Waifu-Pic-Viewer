@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Waifu Pic Viewer</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="styles.css">
+
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-4">
+    <div class="bg-gray-800 p-6 md:p-8 rounded-xl shadow-2xl w-full max-w-md md:max-w-xl lg:max-w-4xl text-center border border-gray-700">
+        <h1 class="text-3xl md:text-4xl font-extrabold text-blue-400 mb-6 drop-shadow-lg">
+            Waifu Pic Viewer
+        </h1>
+
+        <!-- Main content area: Options on left, Image on right for desktop -->
+        <div class="flex flex-col md:flex-row md:items-start md:space-x-8">
+            <!-- Left Column: Category and Endpoint Selection -->
+            <div class="w-full md:w-1/2 md:text-left mb-6 md:mb-0">
+                <!-- Category Selection (SFW/NSFW) -->
+                <div class="mb-5">
+                    <label for="categorySelect" class="block text-lg font-semibold mb-2 text-gray-300">
+                        Pilih Kategori:
+                    </label>
+                    <select id="categorySelect" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-200 shadow-md transition duration-300 ease-in-out hover:border-blue-500 cursor-pointer">
+                        <option value="" disabled selected>Pilih salah satu</option>
+                        <option value="sfw">SFW (Safe For Work)</option>
+                        <option value="nsfw">NSFW (Not Safe For Work)</option>
+                    </select>
+                </div>
+
+                <!-- Endpoint Selection -->
+                <div class="mb-6">
+                    <label for="endpointSelect" class="block text-lg font-semibold mb-2 text-gray-300">
+                        Pilih Tipe Gambar:
+                    </label>
+                    <select id="endpointSelect" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-200 shadow-md transition duration-300 ease-in-out hover:border-blue-500 cursor-pointer" disabled>
+                        <option value="" disabled selected>Pilih kategori dulu</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Right Column: Image Display Area and Download Link -->
+            <div class="w-full md:w-1/2 flex flex-col items-center">
+                <!-- Image Display Area -->
+                <div class="bg-gray-900 rounded-xl p-4 mb-6 min-h-[250px] flex items-center justify-center border border-gray-700 shadow-inner overflow-hidden w-full">
+                    <img id="waifuImage" src="https://placehold.co/400x300/333333/FFFFFF?text=Gambar+akan+muncul+di+sini" alt="Waifu Image" class="max-w-full h-auto rounded-lg shadow-lg" onerror="this.onerror=null;this.src='https://placehold.co/400x300/333333/FFFFFF?text=Gagal+memuat+gambar';" style="max-height: 500px; object-fit: contain;">
+                </div>
+
+                <!-- Download Link -->
+                <a id="downloadLink" href="#" download="waifu_pic.png" class="hidden mt-4 text-blue-400 hover:underline font-semibold" target="_blank">
+                    Download Gambar
+                </a>
+            </div>
+        </div>
+
+        <!-- Single Action Button -->
+        <div class="flex justify-center mt-6">
+            <button id="actionButton" class="px-8 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold rounded-lg shadow-lg hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition transform duration-200 ease-in-out hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                Start
+            </button>
+        </div>
+
+        <!-- Message Box for errors -->
+        <div id="messageBox" class="mt-6 p-3 bg-red-800 text-red-200 rounded-lg hidden"></div>
+    </div>
+
+    <script>
+        // DOM element references
+        const categorySelect = document.getElementById('categorySelect');
+        const endpointSelect = document.getElementById('endpointSelect');
+        const waifuImage = document.getElementById('waifuImage');
+        const actionButton = document.getElementById('actionButton'); // Renamed button
+        const messageBox = document.getElementById('messageBox');
+        const downloadLink = document.getElementById('downloadLink'); // New download link element
+
+        // Define available endpoints
+        const endpoints = {
+            sfw: [
+                'waifu', 'neko', 'shinobu', 'megumin', 'bully', 'cuddle', 'cry', 'hug', 'awoo',
+                'kiss', 'lick', 'pat', 'smug', 'bonk', 'yeet', 'blush', 'smile', 'wave',
+                'highfive', 'handhold', 'nom', 'bite', 'glomp', 'slap', 'kick', 'happy',
+                'wink', 'poke', 'dance', 'cringe'
+            ],
+            nsfw: [
+                'waifu', 'neko', 'trap', 'blowjob'
+            ]
+        };
+
+        // State variable to track if an image has been displayed
+        let isImageDisplayed = false;
+
+        // Function to display messages in the message box
+        function showMessage(message, type = 'error') {
+            messageBox.textContent = message;
+            messageBox.className = `mt-6 p-3 rounded-lg ${type === 'error' ? 'bg-red-800 text-red-200' : 'bg-green-800 text-green-200'}`;
+            messageBox.classList.remove('hidden');
+        }
+
+        // Function to hide the message box
+        function hideMessage() {
+            messageBox.classList.add('hidden');
+        }
+
+        // Function to update button text and state
+        function updateButtonState() {
+            if (categorySelect.value && endpointSelect.value) {
+                actionButton.disabled = false;
+                actionButton.textContent = isImageDisplayed ? 'Next Gambar' : 'Start';
+            } else {
+                actionButton.disabled = true;
+                actionButton.textContent = 'Start';
+                isImageDisplayed = false; // Reset if selections are incomplete
+            }
+            // Hide download link if selections are incomplete or no image is displayed
+            if (!isImageDisplayed || !categorySelect.value || !endpointSelect.value) {
+                downloadLink.classList.add('hidden');
+            }
+        }
+
+        // Function to populate the endpoint select dropdown
+        function populateEndpoints() {
+            const selectedCategory = categorySelect.value;
+            endpointSelect.innerHTML = '<option value="" disabled selected>Pilih tipe gambar</option>'; // Reset options
+            endpointSelect.disabled = true;
+            waifuImage.src = 'https://placehold.co/400x300/333333/FFFFFF?text=Gambar+akan+muncul+di+sini'; // Reset image
+            isImageDisplayed = false; // Reset image displayed state
+            updateButtonState(); // Update button after category change
+
+            if (selectedCategory) {
+                endpoints[selectedCategory].forEach(endpoint => {
+                    const option = document.createElement('option');
+                    option.value = endpoint;
+                    option.textContent = `/${endpoint}`;
+                    endpointSelect.appendChild(option);
+                });
+                endpointSelect.disabled = false;
+            }
+            hideMessage();
+        }
+
+        // Function to fetch and display the image
+        async function fetchAndDisplayImage() {
+            const selectedCategory = categorySelect.value;
+            const selectedEndpoint = endpointSelect.value;
+
+            if (!selectedCategory || !selectedEndpoint) {
+                showMessage('Harap pilih kategori dan tipe gambar terlebih dahulu.', 'error');
+                return;
+            }
+
+            // Construct the API URL
+            const apiUrl = `https://api.waifu.pics/${selectedCategory}/${selectedEndpoint}`;
+
+            // Disable button and show loading state
+            actionButton.disabled = true;
+            actionButton.textContent = 'Memuat...';
+            waifuImage.src = 'https://placehold.co/400x300/333333/FFFFFF?text=Memuat...'; // Loading placeholder
+            hideMessage();
+            downloadLink.classList.add('hidden'); // Hide download link during loading
+
+            try {
+                const response = await fetch(apiUrl);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                if (data && data.url) {
+                    waifuImage.src = data.url;
+                    waifuImage.onerror = function() {
+                        this.src = 'https://placehold.co/400x300/333333/FFFFFF?text=Gagal+memuat+gambar';
+                        showMessage('Gagal memuat gambar dari URL yang diberikan. Coba lagi atau pilih yang lain.', 'error');
+                        downloadLink.classList.add('hidden'); // Hide download link on error
+                    };
+                    isImageDisplayed = true; // Image successfully displayed
+
+                    // Update download link
+                    downloadLink.href = data.url;
+                    // Try to get a filename from the URL, otherwise use a generic one
+                    const urlParts = data.url.split('/');
+                    const filename = urlParts[urlParts.length - 1].split('?')[0] || 'waifu_pic.png';
+                    downloadLink.setAttribute('download', filename);
+                    downloadLink.classList.remove('hidden'); // Show download link
+                } else {
+                    showMessage('Respon API tidak memiliki URL gambar yang valid.', 'error');
+                    waifuImage.src = 'https://placehold.co/400x300/333333/FFFFFF?text=Gambar+tidak+ditemukan';
+                    isImageDisplayed = false; // Image not displayed
+                    downloadLink.classList.add('hidden'); // Hide download link
+                }
+            } catch (error) {
+                console.error('Error fetching image:', error);
+                showMessage(`Terjadi kesalahan saat mengambil gambar: ${error.message}.`);
+                waifuImage.src = 'https://placehold.co/400x300/333333/FFFFFF?text=Gagal+memuat+gambar';
+                isImageDisplayed = false; // Image not displayed
+                downloadLink.classList.add('hidden'); // Hide download link
+            } finally {
+                // Re-enable button and update text based on state
+                updateButtonState();
+            }
+        }
+
+        // Event Listeners
+        categorySelect.addEventListener('change', populateEndpoints);
+
+        endpointSelect.addEventListener('change', () => {
+            isImageDisplayed = false; // Options changed, so reset state
+            // waifuImage.src = 'https://placehold.co/400x300/333333/FFFFFF?text=Gambar+akan+muncul+di+sini';
+            hideMessage();
+            downloadLink.classList.add('hidden'); // Hide download link when options change
+            updateButtonState(); // Update button text and disabled state
+        });
+
+        actionButton.addEventListener('click', fetchAndDisplayImage);
+
+        // Initial population and button state when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            populateEndpoints();
+            updateButtonState();
+        });
+    </script>
+</body>
+</html>
